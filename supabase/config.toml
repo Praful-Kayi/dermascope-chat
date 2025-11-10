@@ -1,0 +1,18 @@
+project_id = "toiuibqkearodcfzkgvs"
+
+[auth]
+enabled = true
+site_url = "http://localhost:8080"
+additional_redirect_urls = []
+jwt_expiry = 3600
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+
+[functions.analyze-skin]
+verify_jwt = true
+
+[functions.derma-chat]
+verify_jwt = true
