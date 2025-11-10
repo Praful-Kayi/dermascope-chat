@@ -23,8 +23,22 @@ export const ImageAnalysis = ({ imageUrl, onAnalysisComplete, onStartChat }: Ima
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // Extract the file path from the imageUrl
+      const urlParts = imageUrl.split('/');
+      const bucketIndex = urlParts.findIndex(part => part === 'skin-images');
+      const filePath = urlParts.slice(bucketIndex + 1).join('/');
+
+      // Generate a signed URL that the AI can access (valid for 1 hour)
+      const { data: signedUrlData, error: urlError } = await supabase.storage
+        .from('skin-images')
+        .createSignedUrl(filePath, 3600);
+
+      if (urlError || !signedUrlData) {
+        throw new Error("Failed to generate image access URL");
+      }
+
       const { data, error } = await supabase.functions.invoke("analyze-skin", {
-        body: { imageUrl, userId: user.id },
+        body: { imageUrl: signedUrlData.signedUrl, userId: user.id },
       });
 
       if (error) throw error;
