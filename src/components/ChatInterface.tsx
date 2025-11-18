@@ -39,18 +39,6 @@ export const ChatInterface = ({ analysisContext, analysisId }: ChatInterfaceProp
     setLoading(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      // Save user message
-      if (analysisId) {
-        await supabase.from("chat_messages").insert({
-          user_id: user.id,
-          analysis_id: analysisId,
-          role: "user",
-          content: input,
-        });
-      }
 
       // Call chat function with streaming
       const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/derma-chat`;
@@ -115,18 +103,8 @@ export const ChatInterface = ({ analysisContext, analysisId }: ChatInterfaceProp
             } catch (e) {
               console.error("Parse error:", e);
             }
-          }
         }
-
-        // Save assistant message
-        if (analysisId && assistantMessage) {
-          await supabase.from("chat_messages").insert({
-            user_id: user.id,
-            analysis_id: analysisId,
-            role: "assistant",
-            content: assistantMessage,
-          });
-        }
+      }
       }
     } catch (error: any) {
       console.error("Chat error:", error);

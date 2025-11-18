@@ -2,8 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, MessageSquare, AlertCircle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Loader2, MessageSquare, Download, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ImageAnalysisProps {
@@ -20,47 +19,41 @@ export const ImageAnalysis = ({ imageUrl, onAnalysisComplete, onStartChat }: Ima
   const analyzeImage = async () => {
     setAnalyzing(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      // Convert blob URL to base64 for AI analysis
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve) => {
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+      const base64Image = await base64Promise;
 
-      // Extract the file path from the imageUrl
-      const urlParts = imageUrl.split('/');
-      const bucketIndex = urlParts.findIndex(part => part === 'skin-images');
-      const filePath = urlParts.slice(bucketIndex + 1).join('/');
-
-      // Generate a signed URL that the AI can access (valid for 1 hour)
-      const { data: signedUrlData, error: urlError } = await supabase.storage
-        .from('skin-images')
-        .createSignedUrl(filePath, 3600);
-
-      if (urlError || !signedUrlData) {
-        throw new Error("Failed to generate image access URL");
-      }
-
-      const { data, error } = await supabase.functions.invoke("analyze-skin", {
-        body: { imageUrl: signedUrlData.signedUrl, userId: user.id },
+      const ANALYZE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-skin`;
+      const analysisResponse = await fetch(ANALYZE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ imageUrl: base64Image }),
       });
 
-      if (error) throw error;
+      if (!analysisResponse.ok) {
+        throw new Error("Analysis failed");
+      }
 
-      // Save to database
-      const { data: analysisRecord, error: dbError } = await supabase
-        .from("skin_analyses")
-        .insert({
-          user_id: user.id,
-          image_url: imageUrl,
-          analysis_result: data,
-          diagnosis: data.diagnosis,
-          confidence_score: data.confidence,
-          recommendations: data.recommendations,
-        })
-        .select()
-        .single();
+      const data = await analysisResponse.json();
+      if (!data || !data.analysis) throw new Error("No analysis returned");
 
-      if (dbError) throw dbError;
+      const analysisData = {
+        ...data,
+        id: Date.now().toString(),
+      };
 
-      setAnalysis(data);
-      onAnalysisComplete({ ...data, id: analysisRecord.id });
+      setAnalysis(analysisData);
+      onAnalysisComplete(analysisData);
       
       toast({
         title: "Analysis Complete",
@@ -76,6 +69,39 @@ export const ImageAnalysis = ({ imageUrl, onAnalysisComplete, onStartChat }: Ima
     } finally {
       setAnalyzing(false);
     }
+  };
+
+  const downloadAnalysis = () => {
+    if (!analysis) return;
+
+    const content = `DermaScan AI Analysis Report
+Generated: ${new Date().toLocaleString()}
+
+Diagnosis: ${analysis.diagnosis || 'See full analysis'}
+Confidence: ${analysis.confidence}%
+
+Full Analysis:
+${analysis.analysis}
+
+---
+Disclaimer: This is a preliminary AI analysis and NOT a medical diagnosis. 
+Please consult a licensed dermatologist for proper diagnosis and treatment.
+`;
+
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `dermascan-analysis-${Date.now()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Downloaded",
+      description: "Analysis report has been downloaded",
+    });
   };
 
   return (
@@ -124,10 +150,16 @@ export const ImageAnalysis = ({ imageUrl, onAnalysisComplete, onStartChat }: Ima
               </p>
             </div>
 
-            <Button onClick={onStartChat} className="w-full" variant="default">
-              <MessageSquare className="mr-2 h-4 w-4" />
-              Ask Questions About This Analysis
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={downloadAnalysis} variant="outline" className="flex-1">
+                <Download className="mr-2 h-4 w-4" />
+                Download
+              </Button>
+              <Button onClick={onStartChat} className="flex-1">
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Ask Questions
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
