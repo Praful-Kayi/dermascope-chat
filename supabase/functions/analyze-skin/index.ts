@@ -12,8 +12,8 @@ serve(async (req) => {
   }
 
   try {
-    const { imageUrl, userId } = await req.json();
-    console.log('Analyzing skin image:', { imageUrl, userId });
+    const { imageUrl } = await req.json();
+    console.log('Analyzing skin image');
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {

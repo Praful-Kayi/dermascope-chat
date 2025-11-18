@@ -12,7 +12,7 @@ double_confirm_changes = true
 enable_confirmations = false
 
 [functions.analyze-skin]
-verify_jwt = true
+verify_jwt = false
 
 [functions.derma-chat]
-verify_jwt = true
+verify_jwt = false

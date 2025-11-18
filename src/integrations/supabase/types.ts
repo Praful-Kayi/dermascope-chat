@@ -14,77 +14,7 @@ export type Database = {
   }
   public: {
     Tables: {
-      chat_messages: {
-        Row: {
-          analysis_id: string | null
-          content: string
-          created_at: string | null
-          id: string
-          role: string
-          user_id: string
-        }
-        Insert: {
-          analysis_id?: string | null
-          content: string
-          created_at?: string | null
-          id?: string
-          role: string
-          user_id: string
-        }
-        Update: {
-          analysis_id?: string | null
-          content?: string
-          created_at?: string | null
-          id?: string
-          role?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "chat_messages_analysis_id_fkey"
-            columns: ["analysis_id"]
-            isOneToOne: false
-            referencedRelation: "skin_analyses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      skin_analyses: {
-        Row: {
-          analysis_result: Json | null
-          confidence_score: number | null
-          created_at: string | null
-          diagnosis: string | null
-          id: string
-          image_url: string
-          recommendations: string | null
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          analysis_result?: Json | null
-          confidence_score?: number | null
-          created_at?: string | null
-          diagnosis?: string | null
-          id?: string
-          image_url: string
-          recommendations?: string | null
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          analysis_result?: Json | null
-          confidence_score?: number | null
-          created_at?: string | null
-          diagnosis?: string | null
-          id?: string
-          image_url?: string
-          recommendations?: string | null
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Views: {
       [_ in never]: never
